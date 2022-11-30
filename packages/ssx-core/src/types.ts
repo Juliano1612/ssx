@@ -26,10 +26,14 @@ export enum SSXRPCProviders {
 /** Enum of supported networks for Etherscan. */
 export enum SSXEtherscanProviderNetworks {
   MAINNET = 'homestead',
-  ROPSTEN = 'ropsten',
-  RINKEBY = 'rinkeby',
   GOERLI = 'goerli',
-  KOVAN = 'kovan',
+  SEPOLIA = 'sepolia',
+  ARBITRUM = 'arbitrum',
+  ARBITRUM_GOERLI = 'arbitrum-goerli',
+  POLYGON = 'matic',
+  POLYGON_MUMBAI = 'maticmum',
+  OPTIMISM = 'optimism',
+  OPTIMISM_GOERLI = 'optimism-goerli',
 }
 
 /** Etherscan provider settings. */
@@ -46,16 +50,14 @@ export const isSSXEtherscanProvider = (provider: SSXRPCProvider):
 /** Enum of supported networks for Infura. */
 export enum SSXInfuraProviderNetworks {
   MAINNET = 'homestead',
-  ROPSTEN = 'ropsten',
-  RINKEBY = 'rinkeby',
   GOERLI = 'goerli',
-  KOVAN = 'kovan',
+  SEPOLIA = 'sepolia',
+  ARBITRUM_GOERLI = 'arbitrum-goerli',
+  ARBITRUM = 'arbitrum',
   POLYGON = 'matic',
   POLYGON_MUMBAI = 'maticmum',
   OPTIMISM = 'optimism',
-  OPTIMISM_KOVAN = 'optimism-kovan',
-  ARBITRUM = 'arbitrum',
-  ARBITRUM_RINKEBY = 'arbitrum-rinkeby',
+  OPTIMISM_GOERLI = 'optimism-goerli',
 }
 
 /** Infura provider project settings. */
@@ -78,16 +80,13 @@ export const isSSXInfuraProvider = (provider: SSXRPCProvider):
 /** Enum of supported networks for Alchemy. */
 export enum SSXAlchemyProviderNetworks {
   MAINNET = 'homestead',
-  ROPSTEN = 'ropsten',
-  RINKEBY = 'rinkeby',
   GOERLI = 'goerli',
-  KOVAN = 'kovan',
+  ARBITRUM = 'arbitrum',
+  ARBITRUM_GOERLI = 'arbitrum-goerli',
   POLYGON = 'matic',
   POLYGON_MUMBAI = 'maticmum',
   OPTIMISM = 'optimism',
-  OPTIMISM_KOVAN = 'optimism-kovan',
-  ARBITRUM = 'arbitrum',
-  ARBITRUM_RINKEBY = 'arbitrum-rinkeby',
+  OPTIMISM_GOERLI = 'optimism-goerli',
 }
 
 /** Alchemy provider settings. */
@@ -113,9 +112,12 @@ export const isSSXCloudflareProvider = (provider: SSXRPCProvider):
 /** Enum of supported networks for Pocket. */
 export enum SSXPocketProviderNetworks {
   MAINNET = 'homestead',
-  ROPSTEN = 'ropsten',
-  RINKEBY = 'rinkeby',
   GOERLI = 'goerli',
+  RINKEBY = 'rinkeby',
+  ROPSTEN = 'ropsten',
+  KOVAN = 'kovan',
+  POLYGON = 'matic',
+  POLYGON_MUMBAI = 'maticmum',
 }
 
 /** Pocket provider settings. */
@@ -132,8 +134,11 @@ export const isSSXPocketProvider = (provider: SSXRPCProvider):
 /** Enum of supported networks for Ankr. */
 export enum SSXAnkrProviderNetworks {
   MAINNET = 'homestead',
+  GOERLI = 'goerli',
   POLYGON = 'matic',
   ARBITRUM = 'arbitrum',
+  ROPSTEN = 'ropsten',
+  RINKEBY = 'rinkeby',
 }
 
 /** Ankr provider settings. */
