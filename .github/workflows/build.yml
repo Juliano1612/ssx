@@ -1,7 +1,7 @@
 name: Build and Test Monorepo Packages
 on: [push, pull_request]
 jobs:
-  Build-And-Test-Monorepo-Packages:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
@@ -10,10 +10,41 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
-      - name: Install dependencies and build packages
-        run: |
-          yarn
-          yarn test
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        id: cache-node-modules
+        with:
+          path: |
+            node_modules
+            examples/**/node_modules
+            packages/**/node_modules
+            packages/**/dist
+          key: modules-${{ hashFiles('yarn.lock') }}
+      - name: Install Dependencies and Build Packages
+        run: yarn
+      - name: Link Dependencies
+        run: yarn bootstrap
+  test:
+    runs-on: ubuntu-latest
+    needs: Build
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            examples/**/node_modules
+            packages/**/node_modules
+            packages/**/dist
+          key: modules-${{ hashFiles('yarn.lock') }}
+      - name: Test packages
+        run: yarn test
       - uses: codecov/codecov-action@v3
         with:
           files: ./coverage/coverage-final.json
