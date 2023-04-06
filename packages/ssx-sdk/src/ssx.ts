@@ -165,7 +165,7 @@ export class SSX {
    * information.
    * @returns Object containing Lens profiles items and pagination info.
    */
-  async resolveLens(
+  public async resolveLens(
     /* Ethereum User Address. */
     address: string,
     /* Page cursor used to paginate the request. Default to first page. */

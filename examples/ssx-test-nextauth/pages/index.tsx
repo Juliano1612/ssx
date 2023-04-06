@@ -8,12 +8,12 @@ import styles from '../styles/Home.module.css';
 
 
 const Home: NextPage = () => {
-  const { ssx, ssxLoaded } = useSSX();
+  const { ssx, ssxLoaded, signIn } = useSSX();
   const router = useRouter();
   const [address, setAddress] = useState<string>();
 
   const handleSignIn = async () => {
-    await ssx?.signIn();
+    await signIn();
     router.push('/protected');
   };
 

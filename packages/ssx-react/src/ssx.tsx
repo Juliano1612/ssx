@@ -5,7 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import ssx from '@spruceid/ssx';
+import ssx, { SSXClientSession } from '@spruceid/ssx';
 import { useSigner, useAccount } from 'wagmi';
 
 const { SSX } = ssx;
@@ -38,12 +38,18 @@ export interface SSXContextInterface {
   ssx: SSX | undefined;
   /** SSX Instance loading state. */
   ssxLoaded: boolean;
+  /**              */
+  signIn: () => Promise<SSXClientSession | void>;
+  /**              */
+  signOut: () => Promise<void>;
 }
 
 /** Default, uninitialized context. */
 const SSXContext = createContext<SSXContextInterface>({
   ssx: undefined,
   ssxLoaded: false,
+  signIn: undefined,
+  signOut: undefined
 });
 
 /** SSX Provider Component. */
@@ -121,6 +127,14 @@ export const SSXProvider = ({
     return ssx;
   }
 
+  const signIn = () => {
+    return ssx?.signIn?.();
+  }
+
+  const signOut = () => {
+    return ssx?.signOut?.();
+  }
+
   useEffect(() => {
     if (providerLoaded && provider) {
       initializeSSX();
@@ -130,6 +144,8 @@ export const SSXProvider = ({
   const SSXProviderValue: SSXContextInterface = {
     ssx,
     ssxLoaded,
+    signIn,
+    signOut,
   };
 
   return (

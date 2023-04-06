@@ -6,17 +6,17 @@ import { useSSX } from "@spruceid/ssx-react";
 
 export default function Protected() {
     const { data: session, status } = useSession();
-    const { ssx, ssxLoaded } = useSSX();
+    const { ssx, ssxLoaded, signOut: ssxSignOut } = useSSX();
 
     const signOut = async () => {
         try {
-            await ssx?.signOut();
+            // await ssx?.signOut();
+            await ssxSignOut();
         } catch(e) {
             console.error(e);
         }
         nextauthSignOut({ callbackUrl: '/' });
     }
-    
 
     if (status === "loading") {
         <div className={styles.container}>
