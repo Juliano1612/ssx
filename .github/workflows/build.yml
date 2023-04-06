@@ -21,7 +21,6 @@ jobs:
             packages/**/dist
           key: modules-${{ hashFiles('yarn.lock') }}
       - name: Install Dependencies and Build Packages
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: yarn
   test:
     runs-on: ubuntu-latest
