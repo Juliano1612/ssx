@@ -89,9 +89,9 @@ export const ssxResolveEns = async (
       avatar: true,
     }
 ): Promise<SSXEnsData> => {
-  if (!address) {
+  // if (!address) {
     throw new Error('Missing address.');
-  }
+  // }
   const ens: SSXEnsData = {};
   const promises: Array<Promise<any>> = [];
   if (resolveEnsOpts?.domain) {
