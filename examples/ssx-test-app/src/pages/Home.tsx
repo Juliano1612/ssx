@@ -147,6 +147,7 @@ function Home() {
     try {
       await ssxProvider.signIn();
       setSSX(ssxProvider);
+      window.ssx = ssxProvider;
     } catch (err) {
       console.error(err);
     }
@@ -176,6 +177,7 @@ function Home() {
       try {
         await ssx.signIn();
         setSSX(ssx);
+        window.ssx = ssx;
       } catch (err) {
         console.error(err);
       }
@@ -210,8 +212,8 @@ function Home() {
                   SIGN-OUT
                 </Button>
                 <AccountInfo
-                  address={ssx?.address()}
-                  session={ssx?.session()}
+                  address={ssx?.auth.address()}
+                  session={ssx?.auth.getClientSession()}
                 />
               </> :
               <>
