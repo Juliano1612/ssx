@@ -30,7 +30,6 @@ const generateReference = async () => {
         continue;
       }
       const nameParts = name.split('.');
-      //   console.log(name, nameParts, nameParts.length);
       if (nameParts.length === 1) {
         if (!output[name]) {
           output[name] = {};

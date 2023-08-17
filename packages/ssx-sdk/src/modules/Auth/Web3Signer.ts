@@ -1,16 +1,17 @@
 import { Signer } from "ethers";
-import { ISSXSigner } from "./SSXSigner";
+import { IWeb3Signer } from "@spruceid/ssx-core/client"
 
-export class Web3Signer extends ISSXSigner implements ISSXSigner {
+export class Web3Signer extends IWeb3Signer implements IWeb3Signer {
 
   constructor(
     did: string,
     keyId: string,
-    private signer: Signer
+    signer: Signer
   ) {
     super();
     this.did = did;
     this.keyId = keyId;
+    this.signer = signer;
   }
 
   public getDID(): string {
@@ -29,7 +30,7 @@ export class Web3Signer extends ISSXSigner implements ISSXSigner {
     return this.signer.getChainId();
   }
 
-  public async sign(message: string): Promise<string> {
+  public async signMessage(message: string): Promise<string> {
     return this.signer.signMessage(message);
   }
 

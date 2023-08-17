@@ -1,5 +1,4 @@
 import { providers } from 'ethers';
-import { IAuth } from './Auth';
 import {
   SSXEnsData,
   SSXEnsResolveOptions,
@@ -11,93 +10,16 @@ import {
 import {
   SSXClientConfig,
   SSXClientSession,
-  SSXExtension,
+  GnosisDelegation,
+  IWeb3Auth,
+  IWeb3AuthUtils
 } from '@spruceid/ssx-core/client';
 import { initialized, ssxSession } from '@spruceid/ssx-sdk-wasm';
 import axios, { AxiosInstance } from 'axios';
 import merge from 'lodash.merge';
 import { generateNonce } from 'siwe';
-import { GnosisDelegation } from '@spruceid/ssx-core/client';
-import { Web3Signer } from './Signer/Web3Signer';
-// import { ISSXSession } from './SSXSession';
-// import { ISSXSigner } from './SSXSigner';
+import { Web3Signer } from './Web3Signer';
 
-export abstract class IWeb3Auth extends IAuth {
-  /** The Ethereum provider */
-  protected provider: providers.Web3Provider;
-
-  /** An SSX Signer abstraction */
-  protected signer: Web3Signer;
-
-  /** Web3AuthUtils instance */
-  protected web3AuthUtils: Web3AuthUtils;
-
-  /** The user session representation (once signed in). */
-  public userSession?: SSXClientSession;
-
-  /** The SSXClientConfig object. */
-  protected config: SSXClientConfig;
-
-  /** Extensions for the SSXClientSession. */
-  protected extensions: SSXExtension[] = [];
-
-  /** Instance of SSXSessionManager */
-  public builder: ssxSession.SSXSessionManager;
-
-  /**
-  * Promise that is initialized on construction of this class to run the "afterConnect" methods
-  * of the extensions.
-  */
-  public afterConnectHooksPromise: Promise<void>;
-
-  /** If there is a connection with a Web3Wallet */
-  protected connected: boolean;
-
-  abstract isConnected(): boolean;
-
-  abstract connect(): Promise<void>;
-  /**
-   * ENS data supported by SSX.
-   * @param address - User address.
-   * @param resolveEnsOpts - Options to resolve ENS.
-   * @returns Object containing ENS data.
-   */
-  abstract resolveEns(
-    /** User address */
-    address: string,
-    resolveEnsOpts: SSXEnsResolveOptions
-  ): Promise<SSXEnsData>;
-  /**
-   * Resolves Lens profiles owned by the given Ethereum Address. Each request is
-   * limited by 10. To get other pages you must pass the pageCursor parameter.
-   *
-   * Lens profiles can be resolved on the Polygon Mainnet (matic) or Mumbai
-   * Testnet (maticmum). Visit https://docs.lens.xyz/docs/api-links for more
-   * information.
-   *
-   * @param address - Ethereum User address.
-   * @param pageCursor - Page cursor used to paginate the request. Default to
-   * first page. Visit https://docs.lens.xyz/docs/get-profiles#api-details for
-   * more information.
-   * @returns Object containing Lens profiles items and pagination info.
-   */
-  abstract resolveLens(
-    /* Ethereum User Address. */
-    address: string,
-    /* Page cursor used to paginate the request. Default to first page. */
-    pageCursor: string
-  ): Promise<string | SSXLensProfilesResponse>;
-  abstract address(): string | undefined;
-  abstract chainId(): number | undefined;
-  abstract getProvider(): Promise<providers.Web3Provider>;
-
-  /**
-   * Extends SSX with a functions that are called after connecting and signing in.
-   */
-  public extend(extension: SSXExtension): void {
-    this.extensions.push(extension);
-  }
-}
 
 const SSX_DEFAULT_WEB3_CONFIG: SSXClientConfig = {
   providers: {
@@ -308,7 +230,7 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
 
       const siweConfig = merge(defaults, this.config.siweConfig);
       const siwe = await this.builder.build(siweConfig);
-      const signature = await this.signer.sign(siwe);
+      const signature = await this.signer.signMessage(siwe);
 
       let session = {
         address: siweConfig.address,
@@ -404,18 +326,23 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
   public getClientSession(): SSXClientSession {
     return this.userSession;
   }
+
+  public getConfig(): SSXClientConfig {
+    return this.config;
+  }
 }
 
-class Web3AuthUtils {
+class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
 
   /** Axios instance. */
   public api?: AxiosInstance;
 
-  constructor(private config: SSXClientConfig) {
-
-    if (this.config.providers?.server?.host) {
+  constructor(config: SSXClientConfig) {
+    super();
+    this.config = config;
+    if (config.providers?.server?.host) {
       this.api = axios.create({
-        baseURL: this.config.providers.server.host,
+        baseURL: config.providers.server.host,
         withCredentials: true,
       });
     }

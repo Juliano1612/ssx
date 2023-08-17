@@ -17,8 +17,7 @@ import {
   IStorageDeleteOptions,
 } from './interfaces';
 import {
-  IUserAuthorization,
-  UserAuthorizationConnected,
+  IWeb3Auth,
   SiweMessage,
 } from '../../';
 
@@ -47,7 +46,7 @@ export class KeplerStorage implements IStorage, IKepler {
   public prefix: string;
   private hosts: string[];
   private autoCreateNewOrbit: boolean;
-  private userAuth: IUserAuthorization;
+  private userAuth: IWeb3Auth;
   private keplerModule?: any;
   private credentialsModule?: boolean;
   /** The users orbitId. */
@@ -62,7 +61,7 @@ export class KeplerStorage implements IStorage, IKepler {
   /** The domain to display in the SIWE message. */
   domain?: string;
 
-  constructor(config: any, userAuth: IUserAuthorization) {
+  constructor(config: any, userAuth: IWeb3Auth) {
     this.userAuth = userAuth;
     this.hosts = [...(config?.hosts || []), 'https://kepler.spruceid.xyz'];
     this.prefix = config?.prefix || '';
@@ -74,19 +73,21 @@ export class KeplerStorage implements IStorage, IKepler {
   }
 
   public async afterConnect(
-    ssx: UserAuthorizationConnected
+    auth: IWeb3Auth
   ): Promise<ConfigOverrides> {
     await initialized;
     this.keplerModule = await kepler;
     this.sessionManager = new (await ssxSession).SSXSessionManager();
     (global as any).keplerModule = this.keplerModule;
 
-    const address = await ssx.provider.getSigner().getAddress();
-    const chain = await ssx.provider.getSigner().getChainId();
+    const provider = await auth.getProvider();
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    const chain = await signer.getChainId();
 
     this.orbitId = `kepler:pkh:eip155:${chain}:${address}://default`;
 
-    this.domain = ssx.config.siweConfig?.domain;
+    this.domain = auth.getConfig().siweConfig?.domain;
     return {};
   }
 
@@ -223,7 +224,7 @@ export class KeplerStorage implements IStorage, IKepler {
   ): Promise<boolean> {
     try {
       if (!ssxSession) {
-        ({ session: ssxSession } = this.userAuth);
+        ssxSession = this.userAuth.getClientSession();
       }
 
       const session = await this.generateKeplerSession(ssxSession);
@@ -288,7 +289,8 @@ export class KeplerStorage implements IStorage, IKepler {
 
     // build and sign message
     const siwe = await this.sessionManager.build(siweConfig, null, delegateDID);
-    const signature = await this.userAuth.signMessage(siwe);
+    const signer = await this.userAuth.getSigner();
+    const signature = await signer.signMessage(siwe);
 
     return {
       siwe,

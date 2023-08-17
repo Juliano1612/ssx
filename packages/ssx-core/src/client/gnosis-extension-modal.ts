@@ -1,4 +1,4 @@
-import { ConfigOverrides, ISSXConnected, SSXExtension } from './types';
+import { ConfigOverrides, IWeb3Auth, SSXExtension } from './types';
 import { providers } from 'ethers';
 import { gnosisDelegatorsFor } from '../utils';
 
@@ -292,9 +292,10 @@ export class GnosisDelegation implements SSXExtension {
    * @param ssx - SSXConnected instance.
    * @returns Promise with extension status.
    */
-  async afterConnect(ssx: ISSXConnected): Promise<ConfigOverrides> {
-    this.web3provider = ssx.provider;
-    this._connectedAddress = await ssx.provider.getSigner().getAddress();
+  async afterConnect(auth: IWeb3Auth): Promise<ConfigOverrides> {
+    this.web3provider = await auth.getProvider();
+    const signer = await this.web3provider.getSigner();
+    this._connectedAddress = await signer.getAddress();
 
     const gnosisModal = {
       abortOperation: this.abortOperation,
