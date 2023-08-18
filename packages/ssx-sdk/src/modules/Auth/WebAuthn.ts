@@ -1,41 +1,6 @@
 import { IWebAuthn, SSXClientSession } from '@spruceid/ssx-core/client';
 import { generateNonce } from 'siwe';
 
-interface pubKeyCredOptions {
-  attestation?: 'direct' | 'enterprise' | 'indirect' | 'none'; // AttestationConveyancePreference
-  authenticatorSelection?: {
-    authenticatorAttachment?: 'cross-platform' | 'platform'; // AuthenticatorAttachment
-    requireResidentKey?: boolean;
-    residentKey?: 'discouraged' | 'preferred' | 'required'; // ResidentKeyRequirement
-    userVerification?: 'discouraged' | 'preferred' | 'required'; // UserVerificationRequirement
-  };
-  challenge: BufferSource;
-  excludeCredentials?: Array<{
-    id: BufferSource;
-    transports?: AuthenticatorTransport[];
-    type: PublicKeyCredentialType;
-  }>; // PublicKeyCredentialDescriptor[]
-  extensions?: Array<{
-    appid?: string;
-    credProps?: boolean;
-    hmacCreateSecret?: boolean;
-  }>; // AuthenticationExtensionsClientInputs
-  pubKeyCredParams: Array<{
-    alg: COSEAlgorithmIdentifier;
-    type: PublicKeyCredentialType;
-  }>; //PublicKeyCredentialParameters[]
-  rp: {
-    id?: string;
-    name: string;
-  }; // PublicKeyCredentialRpEntity
-  timeout?: number;
-  user: {
-    displayName: string;
-    id: BufferSource;
-    name: string;
-  }; //PublicKeyCredentialUserEntity
-}
-
 export class WebAuthn extends IWebAuthn implements IWebAuthn {
   hasCredential(): boolean {
     return !!!this.credential;
@@ -49,18 +14,18 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
   ): Promise<Credential> {
     // https://w3c.github.io/webauthn/#dictionary-makecredentialoptions
     const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions =
-      {
-        rp: this.config.rp,
-        user: this.getUser(userId, name, displayName),
-        challenge: this.generateChallenge(),
-        pubKeyCredParams: this.getPubKeyCredParams(),
-        timeout: this.config?.timeout,
-        excludeCredentials: this.config?.excludeCredentials,
-        authenticatorSelection: this.config?.authenticatorSelection,
-        attestation: this.config?.attestation,
-        // attestationFormats: this.config?.attestationFormats, TODO: Missing types
-        extensions: this.config?.extensions,
-      };
+    {
+      rp: this.config.rp,
+      user: this.getUser(userId, name, displayName),
+      challenge: this.generateChallenge(),
+      pubKeyCredParams: this.getPubKeyCredParams(),
+      timeout: this.config?.timeout,
+      excludeCredentials: this.config?.excludeCredentials,
+      authenticatorSelection: this.config?.authenticatorSelection,
+      attestation: this.config?.attestation,
+      // attestationFormats: this.config?.attestationFormats, TODO: Missing types
+      extensions: this.config?.extensions,
+    };
 
     return navigator.credentials
       .create({
@@ -134,27 +99,34 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
     throw new Error('Method not implemented.');
   }
 
-  async signIn(): Promise<any> {
-    ////// START server generated info //////
-    // Usually the below publicKey object is constructed on your server
-    // here for DEMO purposes only
-    const rawId = localStorage.getItem('rawId');
-    const publicKey: PublicKeyCredentialRequestOptions = {
-      // your domain
-      rpId: 'localhost',
+  async signIn(
+    allowCredentials?: Array<PublicKeyCredentialDescriptor>,
+    requestOptions?: {
+      mediation?: CredentialMediationRequirement,
+      signal?: AbortSignal
+    }
+  ): Promise<Credential> {
+    // https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-rp
+    const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
       challenge: this.generateChallenge(),
-      userVerification: 'preferred',
-      allowCredentials: [
-        {
-          id: strToBin(rawId),
-          type: 'public-key',
-        },
-      ],
+      timeout: this.config?.request.timeout,
+      rpId: this.config.request.rpId,
+      allowCredentials,
+      userVerification: this.config.request.userVerification,
+      // attestation: this.config.request.attestation, TODO: Missing types
+      // attestationFormat: this.config.request.attestationFormat, TODO: Missing types
+      extensions: this.config.request.extensions,
     };
-    ////// END server generated info //////
-    const credential = await navigator.credentials.get({
-      publicKey: publicKey,
-    });
+
+    return navigator.credentials
+      .get({
+        publicKey: publicKeyCredentialRequestOptions,
+        signal: requestOptions?.signal,
+      })
+      .then(credential => {
+        this.credential = credential;
+        return this.credential;
+      });
   }
 
   signOut(): Promise<any> {

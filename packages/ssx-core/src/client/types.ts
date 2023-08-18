@@ -249,6 +249,8 @@ export interface SSXWebAuthnConfig {
   authenticatorSelection?: AuthenticatorSelectionCriteria;
   attestation?: AttestationConveyancePreference;
   extensions?: AuthenticationExtensionsClientInputs;
+  // LOGIN
+  request: Partial<PublicKeyCredentialRequestOptions>
 }
 
 export abstract class IWeb3AuthUtils {
