@@ -12,14 +12,13 @@ import {
   SSXClientSession,
   GnosisDelegation,
   IWeb3Auth,
-  IWeb3AuthUtils
+  IWeb3AuthUtils,
 } from '@spruceid/ssx-core/client';
 import { initialized, ssxSession } from '@spruceid/ssx-sdk-wasm';
 import axios, { AxiosInstance } from 'axios';
 import merge from 'lodash.merge';
 import { generateNonce } from 'siwe';
 import { Web3Signer } from './Web3Signer';
-
 
 const SSX_DEFAULT_WEB3_CONFIG: SSXClientConfig = {
   providers: {
@@ -37,7 +36,7 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
       providers: {
         ...SSX_DEFAULT_WEB3_CONFIG.providers,
         ...config?.providers,
-      }
+      },
     };
 
     this.web3AuthUtils = new Web3AuthUtils(this.config);
@@ -50,7 +49,7 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
 
   public isConnected(): boolean {
     return this.connected;
-  };
+  }
 
   /** Verifies if extension is enabled. */
   public isExtensionEnabled = (namespace: string) =>
@@ -148,11 +147,11 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
   }
 
   /**
-  * ENS data supported by SSX.
-  * @param address - User address.
-  * @param resolveEnsOpts - Options to resolve ENS.
-  * @returns Object containing ENS data.
-  */
+   * ENS data supported by SSX.
+   * @param address - User address.
+   * @param resolveEnsOpts - Options to resolve ENS.
+   * @returns Object containing ENS data.
+   */
   public async resolveEns(
     /** User address */
     address: string,
@@ -241,7 +240,10 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
         signature,
       };
 
-      const response = await this.web3AuthUtils.ssxServerLogin(session, this.isExtensionEnabled);
+      const response = await this.web3AuthUtils.ssxServerLogin(
+        session,
+        this.isExtensionEnabled
+      );
 
       session = {
         ...session,
@@ -266,7 +268,10 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
         resolveEnsOnClient = true;
 
         promises.push(
-          this.resolveEns(this.userSession.address, this.config.resolveEns.resolve)
+          this.resolveEns(
+            this.userSession.address,
+            this.config.resolveEns.resolve
+          )
         );
       }
     }
@@ -333,7 +338,6 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
 }
 
 class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
-
   /** Axios instance. */
   public api?: AxiosInstance;
 
@@ -357,13 +361,13 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
     const route = this.config.providers?.server?.routes?.nonce ?? '/ssx-nonce';
     const requestConfig = isSSXRouteConfig(route)
       ? {
-        customAPIOperation: undefined,
-        ...route,
-      }
+          customAPIOperation: undefined,
+          ...route,
+        }
       : {
-        customAPIOperation: undefined,
-        url: route,
-      };
+          customAPIOperation: undefined,
+          url: route,
+        };
 
     const { customAPIOperation } = requestConfig;
     if (customAPIOperation) {
@@ -398,17 +402,20 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
    * @param session - SSXClientSession object.
    * @returns Promise with server session data.
    */
-  public async ssxServerLogin(session: SSXClientSession, isExtensionEnabled: (string) => boolean): Promise<any> {
+  public async ssxServerLogin(
+    session: SSXClientSession,
+    isExtensionEnabled: (string) => boolean
+  ): Promise<any> {
     const route = this.config.providers?.server?.routes?.login ?? '/ssx-login';
     const requestConfig = isSSXRouteConfig(route)
       ? {
-        customAPIOperation: undefined,
-        ...route,
-      }
+          customAPIOperation: undefined,
+          ...route,
+        }
       : {
-        customAPIOperation: undefined,
-        url: route,
-      };
+          customAPIOperation: undefined,
+          url: route,
+        };
     const { customAPIOperation } = requestConfig;
 
     if (customAPIOperation) {
@@ -437,7 +444,7 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
           resolveEns,
           resolveLens,
         };
-        // @TODO(w4ll3): figure out how to send a custom sessionKey
+        // TODO: figure out how to send a custom sessionKey
         return this.api
           .request({
             method: 'post',
@@ -459,13 +466,13 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
       this.config.providers?.server?.routes?.logout ?? '/ssx-logout';
     const requestConfig = isSSXRouteConfig(route)
       ? {
-        customAPIOperation: undefined,
-        ...route,
-      }
+          customAPIOperation: undefined,
+          ...route,
+        }
       : {
-        customAPIOperation: undefined,
-        url: route,
-      };
+          customAPIOperation: undefined,
+          url: route,
+        };
     // check if we should run a custom operation instead
     const { customAPIOperation } = requestConfig;
 
@@ -489,5 +496,4 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
       }
     }
   }
-
 }

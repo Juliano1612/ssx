@@ -111,10 +111,10 @@ export interface SSXExtension {
   afterSignIn?(session: SSXClientSession): Promise<void>;
 }
 
-/** 
+/**
  * IAuth
  * All auth modules must implement/extend the IAuth interface.
- * Only these methods will be available in the root object. 
+ * Only these methods will be available in the root object.
  */
 
 export abstract class IAuth {
@@ -149,9 +149,9 @@ export abstract class IWeb3Auth extends IAuth {
   public builder: ssxSession.SSXSessionManager;
 
   /**
-  * Promise that is initialized on construction of this class to run the "afterConnect" methods
-  * of the extensions.
-  */
+   * Promise that is initialized on construction of this class to run the "afterConnect" methods
+   * of the extensions.
+   */
   public afterConnectHooksPromise: Promise<void>;
 
   /** If there is a connection with a Web3Wallet */
@@ -204,11 +204,58 @@ export abstract class IWeb3Auth extends IAuth {
   }
 }
 
+// https://w3c.github.io/webauthn/#dictionary-makecredentialoptions
+export abstract class IWebAuthn extends IAuth {
+  /** Webauthn public key */
+  protected publicKey: IWeb3AuthUtils;
+
+  /** The credential for the current session */
+  protected credential: Credential;
+
+  /** The WebAuthn object. */
+  // TODO: Maybe a hook?
+  protected config: SSXWebAuthnConfig;
+
+  /** Instance of SSXSessionManager */
+  public builder: ssxSession.SSXSessionManager;
+
+  /**
+   * Promise that is initialized on construction of this class to run the "afterConnect" methods
+   * of the extensions.
+   */
+  // TODO: Maybe a hook?
+  public afterConnectHooksPromise: Promise<void>;
+
+  abstract hasCredential(): boolean;
+
+  abstract register(
+    userId: BufferSource,
+    name: string,
+    displayName: string,
+    createOptions: { signal: AbortSignal }
+  ): Promise<Credential>;
+
+  abstract generateChallenge(): BufferSource;
+
+  public getCredential = () => this.credential;
+}
+
+export interface SSXWebAuthnConfig {
+  pubKeyCredParams?: Array<PublicKeyCredentialParameters>;
+  generateChallenge?: () => BufferSource;
+  rp: PublicKeyCredentialRpEntity;
+  timeout?: number;
+  excludeCredentials?: Array<PublicKeyCredentialDescriptor>;
+  authenticatorSelection?: AuthenticatorSelectionCriteria;
+  attestation?: AttestationConveyancePreference;
+  extensions?: AuthenticationExtensionsClientInputs;
+}
+
 export abstract class IWeb3AuthUtils {
   /** Axios instance. */
   protected api?: AxiosInstance;
 
-  protected config: SSXClientConfig; 
+  protected config: SSXClientConfig;
 
   /**
    * Requests nonce from server.
@@ -222,18 +269,20 @@ export abstract class IWeb3AuthUtils {
    * @param session - SSXClientSession object.
    * @returns Promise with server session data.
    */
-  abstract ssxServerLogin(session: SSXClientSession, isExtensionEnabled: (string) => boolean): Promise<any>;
+  abstract ssxServerLogin(
+    session: SSXClientSession,
+    isExtensionEnabled: (string) => boolean
+  ): Promise<any>;
 
   abstract ssxServerLogout(session: SSXClientSession): Promise<void>;
 }
 
-
 /**
  * ISSXSigner
- * A class (or interface) representing signing capabilities, specifically 
- * turning SessionConfig and InvocationParams into signed and serialized 
+ * A class (or interface) representing signing capabilities, specifically
+ * turning SessionConfig and InvocationParams into signed and serialized
  * messages. This should abstract over siwe/ucan, the resulting string can
- * be either one. This will probably be a largely internal-use interface, 
+ * be either one. This will probably be a largely internal-use interface,
  * with the signer passed in to SSX and SSXSession being converted into it.
  */
 export abstract class ISSXSigner {
@@ -251,25 +300,22 @@ export abstract class ISSXSigner {
 
   /**
    * async delegate(sessionConfig: SessionConfig) => string
-   * Creates, signs and serializes a delegation based on the provided 
-   * SessionConfig. Should not bother checking if the capabilities are 
+   * Creates, signs and serializes a delegation based on the provided
+   * SessionConfig. Should not bother checking if the capabilities are
    * actually authorized by any parent delegations.
    */
   abstract delegate(): Promise<any>;
 
-
   /**
    * async invoke(invocationParams: InvocationParams) => string
-   * Creates, signs and serializes an invocation based on the provided 
-   * InvocationParamsShould not bother checking if the actions are 
+   * Creates, signs and serializes an invocation based on the provided
+   * InvocationParamsShould not bother checking if the actions are
    * actually authorized by any parent delegations.
    */
   abstract invoke(): Promise<any>;
 }
 
-
-export abstract class IWeb3Signer extends ISSXSigner  implements ISSXSigner {
-  
+export abstract class IWeb3Signer extends ISSXSigner implements ISSXSigner {
   protected signer: Signer;
 
   abstract getDID(): string;
