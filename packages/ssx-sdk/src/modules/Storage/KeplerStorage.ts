@@ -87,7 +87,7 @@ export class KeplerStorage implements IStorage, IKepler {
 
     this.orbitId = `kepler:pkh:eip155:${chain}:${address}://default`;
 
-    this.domain = auth.getConfig().siweConfig?.domain;
+    this.domain = auth.getConfig().web3?.siweConfig?.domain;
     return {};
   }
 

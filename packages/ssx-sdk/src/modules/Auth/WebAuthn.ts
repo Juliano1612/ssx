@@ -1,7 +1,22 @@
-import { IWebAuthn, SSXClientSession } from '@spruceid/ssx-core/client';
+import {
+  IWebAuthn,
+  SSXClientConfig,
+  SSXClientSession,
+  SSXWebAuthnConfig
+} from '@spruceid/ssx-core/client';
+import { initialized, ssxSession } from '@spruceid/ssx-sdk-wasm';
 import { generateNonce } from 'siwe';
 
 export class WebAuthn extends IWebAuthn implements IWebAuthn {
+
+  private webAuthnConfig: SSXWebAuthnConfig;
+
+  constructor(config: SSXClientConfig) {
+    super();
+    this.config = config;
+    this.webAuthnConfig = config.webAuthn
+  }
+
   hasCredential(): boolean {
     return !!!this.credential;
   }
@@ -15,16 +30,16 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
     // https://w3c.github.io/webauthn/#dictionary-makecredentialoptions
     const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions =
     {
-      rp: this.config.rp,
+      rp: this.webAuthnConfig?.creation?.rp,
       user: this.getUser(userId, name, displayName),
-      challenge: this.generateChallenge(),
+      challenge: this.generateChallenge(this.webAuthnConfig?.creation?.generateChallenge),
       pubKeyCredParams: this.getPubKeyCredParams(),
-      timeout: this.config?.timeout,
-      excludeCredentials: this.config?.excludeCredentials,
-      authenticatorSelection: this.config?.authenticatorSelection,
-      attestation: this.config?.attestation,
-      // attestationFormats: this.config?.attestationFormats, TODO: Missing types
-      extensions: this.config?.extensions,
+      timeout: this.webAuthnConfig?.creation?.timeout,
+      excludeCredentials: this.webAuthnConfig?.creation?.excludeCredentials,
+      authenticatorSelection: this.webAuthnConfig?.creation?.authenticatorSelection,
+      attestation: this.webAuthnConfig?.creation?.attestation,
+      // attestationFormats: this.webAuthnConfig?.attestationFormats, TODO: Missing types
+      extensions: this.webAuthnConfig?.creation?.extensions,
     };
 
     return navigator.credentials
@@ -39,8 +54,8 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
   }
 
   /** Generates an Uint8Array from a 96 bits nonce */
-  public generateChallenge = (): BufferSource => {
-    const challenge: BufferSource = this.config?.generateChallenge();
+  public generateChallenge = (customGenerateChallenge: () => BufferSource): BufferSource => {
+    const challenge: BufferSource = customGenerateChallenge?.();
     return challenge ?? new TextEncoder().encode(generateNonce());
   };
 
@@ -59,7 +74,7 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
   // https://datatracker.ietf.org/doc/html/rfc9053#section-2.1
   // https://www.iana.org/assignments/cose/cose.xhtml
   protected getPubKeyCredParams = (): Array<PublicKeyCredentialParameters> => {
-    if (this.config?.pubKeyCredParams.length === 0) {
+    if (this.webAuthnConfig?.creation?.pubKeyCredParams?.length === 0) {
       throw new Error('`pubKeyCredParams` must have at least one algorithm.');
     }
 
@@ -91,12 +106,17 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
       },
     ];
 
-    const pubKeyCredParasms = this.config?.pubKeyCredParams;
-    return pubKeyCredParasms ?? defaultPubKeyCredParams;
+    const pubKeyCredParams = this.webAuthnConfig?.creation?.pubKeyCredParams;
+    return pubKeyCredParams ?? defaultPubKeyCredParams;
   };
 
-  signUp(): Promise<any> {
-    throw new Error('Method not implemented.');
+  async signUp(
+    userId: BufferSource,
+    name: string,
+    displayName: string,
+    createOptions?: { signal?: AbortSignal }
+  ): Promise<Credential> {
+    return this.register(userId, name, displayName, createOptions);
   }
 
   async signIn(
@@ -108,17 +128,17 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
   ): Promise<Credential> {
     // https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-rp
     const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
-      challenge: this.generateChallenge(),
-      timeout: this.config?.request.timeout,
-      rpId: this.config.request.rpId,
+      challenge: this.generateChallenge(this.webAuthnConfig?.request?.generateChallenge),
+      timeout: this.webAuthnConfig?.request?.timeout,
+      rpId: this.webAuthnConfig?.request?.rpId,
       allowCredentials,
-      userVerification: this.config.request.userVerification,
-      // attestation: this.config.request.attestation, TODO: Missing types
-      // attestationFormat: this.config.request.attestationFormat, TODO: Missing types
-      extensions: this.config.request.extensions,
+      userVerification: this.webAuthnConfig?.request?.userVerification,
+      // attestation: this.webAuthnConfig.request.attestation, TODO: Missing types
+      // attestationFormat: this.webAuthnConfig.request.attestationFormat, TODO: Missing types
+      extensions: this.webAuthnConfig?.request?.extensions,
     };
 
-    return navigator.credentials
+    const credential = navigator.credentials
       .get({
         publicKey: publicKeyCredentialRequestOptions,
         signal: requestOptions?.signal,
@@ -127,6 +147,24 @@ export class WebAuthn extends IWebAuthn implements IWebAuthn {
         this.credential = credential;
         return this.credential;
       });
+
+    let builder;
+    try {
+      builder = await initialized.then(
+        () => new ssxSession.SSXSessionManager()
+      );
+    } catch (err) {
+      // SSX wasm related error
+      console.error(err);
+      throw err;
+    }
+
+    this.builder = builder;
+
+    const sessionKey = this.builder.jwk();
+    console.log(sessionKey);
+
+    return credential
   }
 
   signOut(): Promise<any> {

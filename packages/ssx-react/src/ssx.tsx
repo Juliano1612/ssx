@@ -66,16 +66,19 @@ export const SSXProvider = ({
   function initializeSSX() {
     const modifiedSSXConfig = {
       ...ssxConfig,
-      siweConfig: {
-        ...ssxConfig?.siweConfig,
-      },
-      providers: {
-        ...ssxConfig?.providers,
-        web3: {
-          driver: provider,
-          ...ssxConfig?.providers?.web3,
+      web3: {
+        ...ssxConfig?.web3,
+        siweConfig: {
+          ...ssxConfig?.web3?.siweConfig,
         },
-      },
+        providers: {
+          ...ssxConfig?.web3?.provider,
+          web3: {
+            driver: provider,
+            ...ssxConfig?.web3?.provider
+          },
+        },
+      }
     };
 
     const ssxInstance = new SSX(modifiedSSXConfig);

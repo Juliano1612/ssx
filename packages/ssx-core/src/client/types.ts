@@ -12,16 +12,23 @@ import {
 
 /** Core config for SSX. */
 export interface SSXClientConfig {
-  /** Whether or not daoLogin is enabled. */
-  enableDaoLogin?: boolean;
-  /** Connection to a cryptographic keypair and/or network. */
-  providers?: SSXClientProviders;
-  /** Optional session configuration for the SIWE message. */
-  siweConfig?: SiweConfig;
-  /** Whether or not ENS resolution is enabled. True means resolve all on client. */
-  resolveEns?: boolean | SSXEnsConfig;
-  /** Whether or not Lens resolution is enabled. True means resolve on client. */
-  resolveLens?: boolean | 'onServer';
+  /** Web3 wallet provider */
+  web3?: SSXWeb3Config;
+  /** WebAuthn config */
+  webAuthn?: SSXWebAuthnConfig;
+  /** Optional reference to server running ssx-server.
+   * Providing this field enables communication with ssx-server */
+  server?: SSXProviderServer;
+  /** Optional modules available */
+  modules?: SSXModuleConfig;
+}
+
+/**
+ * Configuration for managing SSX Modules
+ */
+export interface SSXModuleConfig {
+  storage?: boolean | { [key: string]: any };
+  credentials?: boolean;
 }
 
 /** Representation of an active SSXSession. */
@@ -61,17 +68,8 @@ export interface SSXProviderWeb3 {
    * const signer = useSigner(); const provider = signer.provider; from Wagmi for Rainbowkit
    * */
   driver: any;
-}
-
-/** SSX web3 configuration settings */
-export interface SSXClientProviders {
-  /** Web3 wallet provider */
-  web3?: SSXProviderWeb3;
   /** JSON RPC provider configurations */
   rpc?: SSXRPCProvider;
-  /** Optional reference to server running ssx-server.
-   * Providing this field enables communication with ssx-server */
-  server?: SSXProviderServer;
 }
 
 /** Optional session configuration for the SIWE message. */
@@ -118,12 +116,22 @@ export interface SSXExtension {
  */
 
 export abstract class IAuth {
-  abstract signUp(): Promise<any>;
-  abstract signIn(): Promise<any>;
-  abstract signOut(): Promise<any>;
+  /** Extensions for the SSXClientSession. */
+  protected extensions: SSXExtension[] = [];
+
+  abstract signUp(...params): Promise<any>;
+  abstract signIn(...params): Promise<any>;
+  abstract signOut(...params): Promise<any>;
   abstract getSigner(): any;
   abstract getSession(): any;
   abstract getClientSession(): SSXClientSession;
+
+  /**
+   * Extends SSX with a functions that are called after connecting and signing in.
+   */
+  public extend(extension: SSXExtension): void {
+    this.extensions.push(extension);
+  }
 }
 
 export abstract class IWeb3Auth extends IAuth {
@@ -141,9 +149,6 @@ export abstract class IWeb3Auth extends IAuth {
 
   /** The SSXClientConfig object. */
   protected config: SSXClientConfig;
-
-  /** Extensions for the SSXClientSession. */
-  protected extensions: SSXExtension[] = [];
 
   /** Instance of SSXSessionManager */
   public builder: ssxSession.SSXSessionManager;
@@ -195,13 +200,19 @@ export abstract class IWeb3Auth extends IAuth {
   abstract chainId(): number | undefined;
   abstract getProvider(): Promise<providers.Web3Provider>;
   abstract getConfig(): SSXClientConfig;
+}
 
-  /**
-   * Extends SSX with a functions that are called after connecting and signing in.
-   */
-  public extend(extension: SSXExtension): void {
-    this.extensions.push(extension);
-  }
+export interface SSXWeb3Config {
+  /** Connection to a cryptographic keypair and/or network. */
+  provider?: SSXProviderWeb3;
+  /** Whether or not daoLogin is enabled. */
+  enableDaoLogin?: boolean;
+  /** Optional session configuration for the SIWE message. */
+  siweConfig?: SiweConfig;
+  /** Whether or not ENS resolution is enabled. True means resolve all on client. */
+  resolveEns?: boolean | SSXEnsConfig;
+  /** Whether or not Lens resolution is enabled. True means resolve on client. */
+  resolveLens?: boolean | 'onServer';
 }
 
 // https://w3c.github.io/webauthn/#dictionary-makecredentialoptions
@@ -214,7 +225,7 @@ export abstract class IWebAuthn extends IAuth {
 
   /** The WebAuthn object. */
   // TODO: Maybe a hook?
-  protected config: SSXWebAuthnConfig;
+  protected config: SSXClientConfig;
 
   /** Instance of SSXSessionManager */
   public builder: ssxSession.SSXSessionManager;
@@ -235,22 +246,31 @@ export abstract class IWebAuthn extends IAuth {
     createOptions: { signal: AbortSignal }
   ): Promise<Credential>;
 
-  abstract generateChallenge(): BufferSource;
+  abstract generateChallenge(customGenerateChallenge: () => BufferSource): BufferSource;
 
   public getCredential = () => this.credential;
 }
 
 export interface SSXWebAuthnConfig {
-  pubKeyCredParams?: Array<PublicKeyCredentialParameters>;
-  generateChallenge?: () => BufferSource;
-  rp: PublicKeyCredentialRpEntity;
-  timeout?: number;
-  excludeCredentials?: Array<PublicKeyCredentialDescriptor>;
-  authenticatorSelection?: AuthenticatorSelectionCriteria;
-  attestation?: AttestationConveyancePreference;
-  extensions?: AuthenticationExtensionsClientInputs;
-  // LOGIN
-  request: Partial<PublicKeyCredentialRequestOptions>
+  creation: {
+    rp: PublicKeyCredentialRpEntity;
+    generateChallenge?: () => BufferSource;
+    pubKeyCredParams?: Array<PublicKeyCredentialParameters>;
+    timeout?: number;
+    excludeCredentials?: Array<PublicKeyCredentialDescriptor>;
+    authenticatorSelection?: AuthenticatorSelectionCriteria;
+    attestation?: AttestationConveyancePreference;
+    extensions?: AuthenticationExtensionsClientInputs;
+  }
+  // request: Partial<PublicKeyCredentialRequestOptions>
+  request?: {
+    generateChallenge?: () => BufferSource;
+    timeout?: number;
+    rpId?: string;
+    allowCredentials?: Array<PublicKeyCredentialDescriptor>;
+    userVerification?: UserVerificationRequirement;
+    extensions?: AuthenticationExtensionsClientInputs;
+  }
 }
 
 export abstract class IWeb3AuthUtils {

@@ -21,8 +21,8 @@ import { generateNonce } from 'siwe';
 import { Web3Signer } from './Web3Signer';
 
 const SSX_DEFAULT_WEB3_CONFIG: SSXClientConfig = {
-  providers: {
-    web3: {
+  web3: {
+    provider: {
       driver: globalThis.ethereum,
     },
   },
@@ -31,17 +31,11 @@ const SSX_DEFAULT_WEB3_CONFIG: SSXClientConfig = {
 export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
   constructor(config: SSXClientConfig = SSX_DEFAULT_WEB3_CONFIG) {
     super();
-    this.config = {
-      ...config,
-      providers: {
-        ...SSX_DEFAULT_WEB3_CONFIG.providers,
-        ...config?.providers,
-      },
-    };
+    this.config = merge(SSX_DEFAULT_WEB3_CONFIG, config);
 
     this.web3AuthUtils = new Web3AuthUtils(this.config);
 
-    if (this.config.enableDaoLogin) {
+    if (this.config.web3.enableDaoLogin) {
       const gnosis = new GnosisDelegation();
       this.extend(gnosis);
     }
@@ -62,10 +56,10 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
     let provider: providers.Web3Provider;
 
     // eslint-disable-next-line no-underscore-dangle
-    if (!this.config.providers.web3.driver?._isProvider) {
+    if (!this.config.web3.provider.driver?._isProvider) {
       try {
         provider = new providers.Web3Provider(
-          this.config.providers.web3.driver
+          this.config.web3.provider.driver
         );
       } catch (err) {
         // Provider creation error
@@ -73,11 +67,11 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
         throw err;
       }
     } else {
-      provider = this.config.providers.web3.driver;
+      provider = this.config.web3.provider.driver;
     }
 
     if (
-      !this.config.providers.web3?.driver?.bridge?.includes('walletconnect')
+      !this.config.web3.provider?.driver?.bridge?.includes('walletconnect')
     ) {
       const connectedAccounts = await provider.listAccounts();
       if (connectedAccounts.length === 0) {
@@ -119,7 +113,10 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
         const overrides = await extension.afterConnect(this);
         this.config = {
           ...this.config,
-          siweConfig: { ...this.config?.siweConfig, ...overrides?.siwe },
+          web3: {
+            ...this.config.web3,
+            siweConfig: { ...this.config?.web3?.siweConfig, ...overrides?.siwe },
+          }
         };
       }
 
@@ -216,7 +213,7 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
       this.signer = new Web3Signer('', '', await this.provider.getSigner());
       const walletAddress = await this.signer.getAddress();
       const defaults = {
-        address: this.config.siweConfig?.address ?? walletAddress,
+        address: this.config.web3.siweConfig?.address ?? walletAddress,
         walletAddress,
         chainId: await this.signer.getChainId(),
         domain: globalThis.location.hostname,
@@ -227,7 +224,7 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
       const serverNonce = await this.web3AuthUtils.ssxServerNonce(defaults);
       if (serverNonce) defaults.nonce = serverNonce;
 
-      const siweConfig = merge(defaults, this.config.siweConfig);
+      const siweConfig = merge(defaults, this.config.web3?.siweConfig);
       const siwe = await this.builder.build(siweConfig);
       const signature = await this.signer.signMessage(siwe);
 
@@ -260,23 +257,23 @@ export class Web3Auth extends IWeb3Auth implements IWeb3Auth {
     const promises = [];
 
     let resolveEnsOnClient = false;
-    if (this.config.resolveEns) {
-      if (this.config.resolveEns === true) {
+    if (this.config.web3.resolveEns) {
+      if (this.config.web3.resolveEns === true) {
         resolveEnsOnClient = true;
         promises.push(this.resolveEns(this.userSession.address));
-      } else if (!this.config.resolveEns.resolveOnServer) {
+      } else if (!this.config.web3.resolveEns.resolveOnServer) {
         resolveEnsOnClient = true;
 
         promises.push(
           this.resolveEns(
             this.userSession.address,
-            this.config.resolveEns.resolve
+            this.config.web3.resolveEns.resolve
           )
         );
       }
     }
 
-    const resolveLensOnClient = this.config.resolveLens === true;
+    const resolveLensOnClient = this.config.web3.resolveLens === true;
     if (resolveLensOnClient) {
       promises.push(this.resolveLens(this.userSession.address));
     }
@@ -344,9 +341,9 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
   constructor(config: SSXClientConfig) {
     super();
     this.config = config;
-    if (config.providers?.server?.host) {
+    if (config.server?.host) {
       this.api = axios.create({
-        baseURL: config.providers.server.host,
+        baseURL: config.server.host,
         withCredentials: true,
       });
     }
@@ -358,16 +355,16 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
    * @returns Promise with nonce.
    */
   public async ssxServerNonce(params: Record<string, any>): Promise<string> {
-    const route = this.config.providers?.server?.routes?.nonce ?? '/ssx-nonce';
+    const route = this.config.server?.routes?.nonce ?? '/ssx-nonce';
     const requestConfig = isSSXRouteConfig(route)
       ? {
-          customAPIOperation: undefined,
-          ...route,
-        }
+        customAPIOperation: undefined,
+        ...route,
+      }
       : {
-          customAPIOperation: undefined,
-          url: route,
-        };
+        customAPIOperation: undefined,
+        url: route,
+      };
 
     const { customAPIOperation } = requestConfig;
     if (customAPIOperation) {
@@ -406,16 +403,16 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
     session: SSXClientSession,
     isExtensionEnabled: (string) => boolean
   ): Promise<any> {
-    const route = this.config.providers?.server?.routes?.login ?? '/ssx-login';
+    const route = this.config.server?.routes?.login ?? '/ssx-login';
     const requestConfig = isSSXRouteConfig(route)
       ? {
-          customAPIOperation: undefined,
-          ...route,
-        }
+        customAPIOperation: undefined,
+        ...route,
+      }
       : {
-          customAPIOperation: undefined,
-          url: route,
-        };
+        customAPIOperation: undefined,
+        url: route,
+      };
     const { customAPIOperation } = requestConfig;
 
     if (customAPIOperation) {
@@ -425,13 +422,13 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
     if (this.api) {
       let resolveEns: boolean | SSXEnsResolveOptions = false;
       if (
-        typeof this.config.resolveEns === 'object' &&
-        this.config.resolveEns.resolveOnServer
+        typeof this.config.web3.resolveEns === 'object' &&
+        this.config.web3.resolveEns.resolveOnServer
       ) {
-        resolveEns = this.config.resolveEns.resolve;
+        resolveEns = this.config.web3.resolveEns.resolve;
       }
 
-      const resolveLens: boolean = this.config.resolveLens === 'onServer';
+      const resolveLens: boolean = this.config.web3.resolveLens === 'onServer';
 
       try {
         const data = {
@@ -463,16 +460,16 @@ class Web3AuthUtils extends IWeb3AuthUtils implements IWeb3AuthUtils {
   public async ssxServerLogout(session: SSXClientSession): Promise<void> {
     // get request configuration
     const route =
-      this.config.providers?.server?.routes?.logout ?? '/ssx-logout';
+      this.config.server?.routes?.logout ?? '/ssx-logout';
     const requestConfig = isSSXRouteConfig(route)
       ? {
-          customAPIOperation: undefined,
-          ...route,
-        }
+        customAPIOperation: undefined,
+        ...route,
+      }
       : {
-          customAPIOperation: undefined,
-          url: route,
-        };
+        customAPIOperation: undefined,
+        url: route,
+      };
     // check if we should run a custom operation instead
     const { customAPIOperation } = requestConfig;
 

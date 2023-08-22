@@ -16,6 +16,7 @@ import {
   SSXExtension,
 } from '@spruceid/ssx-core/client';
 import type { providers } from 'ethers';
+import { WebAuthn } from './modules/Auth/WebAuthn';
 
 declare global {
   interface Window {
@@ -23,25 +24,12 @@ declare global {
   }
 }
 
-/**
- * Configuration for managing SSX Modules
- */
-interface SSXModuleConfig {
-  storage?: boolean | { [key: string]: any };
-  credentials?: boolean;
-}
-
-// temporary: will move to ssx-core
-interface SSXConfig extends SSXClientConfig {
-  modules?: SSXModuleConfig;
-}
-
 const SSX_DEFAULT_CONFIG: SSXClientConfig = {
-  providers: {
-    web3: {
+  web3: {
+    provider: {
       driver: globalThis.ethereum,
     },
-  },
+  }
 };
 
 /** SSX: Self-sovereign anything.
@@ -65,7 +53,7 @@ export class SSX {
    * - creates, manages, and handles session data
    * - manages/provides capabilities
    */
-  public auth: Web3Auth;
+  public auth: Web3Auth | WebAuthn;
 
   /** Storage Module */
   public storage: KeplerStorage;
@@ -73,46 +61,47 @@ export class SSX {
   /** Credentials Module */
   public credentials: ICredentials;
 
-  constructor(private config: SSXConfig = SSX_DEFAULT_CONFIG) {
+  constructor(private config: SSXClientConfig = SSX_DEFAULT_CONFIG) {
     // TODO: pull out config validation into separate function
     // TODO: pull out auth config
-    this.auth = new Web3Auth(config);
+    // this.auth = new Web3Auth(config);
+    this.auth = new WebAuthn(config);
 
-    // initialize storage module
-    // assume credentials is **disabled** if config.credentials is not defined
-    const credentialsConfig =
-      config?.modules?.credentials === undefined ? false : config.modules.credentials;
+    // // initialize storage module
+    // // assume credentials is **disabled** if config.credentials is not defined
+    // const credentialsConfig =
+    //   config?.modules?.credentials === undefined ? false : config.modules.credentials;
 
-    // assume storage module is **disabled** if config.storage is not defined
-    const storageConfig =
-      config?.modules?.storage === undefined ? false : config.modules.storage;
+    // // assume storage module is **disabled** if config.storage is not defined
+    // const storageConfig =
+    //   config?.modules?.storage === undefined ? false : config.modules.storage;
 
-    if (storageConfig !== false) {
-      if (typeof storageConfig === 'object') {
-        storageConfig.credentialsModule = credentialsConfig;
-        // Initialize storage with the provided config
-        this.storage = new KeplerStorage(storageConfig, this.auth);
-      } else {
-        // storage == true or undefined
-        // Initialize storage with default config when no other condition is met
-        this.storage = new KeplerStorage(
-          { prefix: 'ssx', credentialsModule: credentialsConfig },
-          this.auth
-        );
-      }
-      this.extend(this.storage);
-    }
+    // if (storageConfig !== false) {
+    //   if (typeof storageConfig === 'object') {
+    //     storageConfig.credentialsModule = credentialsConfig;
+    //     // Initialize storage with the provided config
+    //     this.storage = new KeplerStorage(storageConfig, this.auth);
+    //   } else {
+    //     // storage == true or undefined
+    //     // Initialize storage with default config when no other condition is met
+    //     this.storage = new KeplerStorage(
+    //       { prefix: 'ssx', credentialsModule: credentialsConfig },
+    //       this.auth
+    //     );
+    //   }
+    //   this.extend(this.storage);
+    // }
 
-    if (credentialsConfig) {
-      // Credentials module depends on the storage module. If it isn't enabled
-      // we won't initialize the credentials module.
-      if (!storageConfig) {
-        throw new Error('You must enable the storage module to use the credentials module.')
-      } else {
-        this.credentials = new Credentials(this.storage);
-        this.extend(this.credentials);
-      }
-    }
+    // if (credentialsConfig) {
+    //   // Credentials module depends on the storage module. If it isn't enabled
+    //   // we won't initialize the credentials module.
+    //   if (!storageConfig) {
+    //     throw new Error('You must enable the storage module to use the credentials module.')
+    //   } else {
+    //     this.credentials = new Credentials(this.storage);
+    //     this.extend(this.credentials);
+    //   }
+    // }
   }
 
   /**

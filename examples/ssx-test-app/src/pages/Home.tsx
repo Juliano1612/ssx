@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SSX } from '@spruceid/ssx';
+import { SSX, SSXClientConfig, SSXModuleConfig, SiweConfig } from '@spruceid/ssx';
 import Header from '../components/Header';
 import Title from '../components/Title';
 import Dropdown from '../components/Dropdown';
@@ -52,22 +52,20 @@ function Home() {
   const [storageEnabled, setStorageEnabled] = useState<string>('Off');
   const [credentialsEnabled, setCredentialsEnabled] = useState('Off');
 
-  const getSSXConfig = (ssxConfig: Record<string, any> = {}) => {
+  const getSSXConfig = (ssxConfig: SSXClientConfig = {}) => {
     if (server === 'On') {
       ssxConfig = {
-        providers: {
-          ...ssxConfig?.provider,
-          server: {
-            host
-          },
-        }
+        ...ssxConfig,
+        server: {
+          host
+        },
       }
     }
 
     if (siweConfig === 'On') {
-      const siweConfig: Record<string, any> = {};
+      const siweConfig: SiweConfig = {};
       if (address) siweConfig.address = address;
-      if (chainId) siweConfig.chainId = chainId;
+      if (chainId) siweConfig.chainId = parseInt(chainId);
       if (domain) siweConfig.domain = domain;
       if (nonce) siweConfig.nonce = nonce;
       if (issuedAt) siweConfig.issuedAt = issuedAt;
@@ -84,17 +82,23 @@ function Home() {
 
     ssxConfig = {
       ...ssxConfig,
-      enableDaoLogin: enableDaoLogin === 'On'
+      web3: {
+        ...ssxConfig.web3,
+        enableDaoLogin: enableDaoLogin === 'On'
+      }
     }
 
     if (resolveEns === 'On') {
       ssxConfig = {
         ...ssxConfig,
-        resolveEns: {
-          resolveOnServer: resolveOnServer === 'On',
-          resolve: {
-            domain: resolveEnsDomain === 'On',
-            avatar: resolveEnsAvatar === 'On'
+        web3: {
+          ...ssxConfig.web3,
+          resolveEns: {
+            resolveOnServer: resolveOnServer === 'On',
+            resolve: {
+              domain: resolveEnsDomain === 'On',
+              avatar: resolveEnsAvatar === 'On'
+            }
           }
         }
       }
@@ -103,11 +107,14 @@ function Home() {
     if (resolveLens === 'On' || resolveLens === 'onServer') {
       ssxConfig = {
         ...ssxConfig,
-        resolveLens: resolveLens === 'On' ? true : resolveLens
+        web3: {
+          ...ssxConfig.web3,
+          resolveLens: resolveLens === 'On' ? true : resolveLens
+        }
       }
     }
 
-    const modules: Record<string, any> = {};
+    const modules: SSXModuleConfig = {};
 
     if (storageEnabled === "On") {
       modules.storage = true;
@@ -135,8 +142,8 @@ function Home() {
 
     setLoading(true);
     const ssxConfig = getSSXConfig({
-      provider: {
-        web3: {
+      web3: {
+        provider: {
           driver: signer.provider
         }
       }
@@ -194,9 +201,27 @@ function Home() {
     setSSX(null);
   };
 
+  const handleSignInWithWebAuthn = async () => {
+    const ssx = new SSX({
+      webAuthn: {
+        creation: {
+          rp: {
+            name: 'SSX Test App'
+          }
+        },
+      },
+    });
+    (window as any).ssx = ssx;
+
+    const { rawId } = await ssx.auth.signUp(new TextEncoder().encode('Test SSX Test App'), 'Test SSX Test App', 'Test SSX Test App');
+    console.log(rawId)
+    const credential = await ssx.auth.signIn([{ id: rawId, type: 'public-key' }])
+    console.log(credential)
+  }
+
   return (
     <div className='App'>
-
+      <button onClick={handleSignInWithWebAuthn}>SIGN-IN WITH WEBAUTHN</button>
       <Header />
       <Title />
       <div className='Content'>
@@ -211,10 +236,10 @@ function Home() {
                 >
                   SIGN-OUT
                 </Button>
-                <AccountInfo
+                {/* <AccountInfo
                   address={ssx?.auth.address()}
                   session={ssx?.auth.getClientSession()}
-                />
+                /> */}
               </> :
               <>
                 <Button
